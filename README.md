@@ -1,6 +1,6 @@
 # T3Boy
 
-In development cloud Game Boy emulator based around the TAS-centric emulation core gambatte being maintained for Gambatte-Speedrun and BizHawk. Web UI written in the T3 Stack with Discord auth integration used to enable cloud hosted game saves and emulator savestates.
+In development cloud Game Boy emulator based around the TAS-centric emulation core "gambatte" which is being maintained for use in Gambatte-Speedrun and BizHawk. Web UI written in the T3 Stack with Discord auth integration used to enable cloud hosted game saves and emulator savestates.
 
 https://t3boy.vercel.app/
 

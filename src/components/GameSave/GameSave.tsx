@@ -162,7 +162,9 @@ export const GameSave: React.FC<Props> = ({ gbPointer, gameHash }) => {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <p className="text-2xl text-white">Cloud In Game Saves</p>
+      <p className="border-b border-solid p-1 text-2xl text-white">
+        Cloud In Game Saves
+      </p>
       <button
         onClick={handleSaveGame}
         className="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:placeholder-gray-400"
@@ -180,7 +182,7 @@ export const GameSave: React.FC<Props> = ({ gbPointer, gameHash }) => {
         )}
       <div>
         <label
-          className="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
+          className="block text-sm font-medium text-gray-900 dark:text-white"
           htmlFor="uploadSave"
         >
           Upload

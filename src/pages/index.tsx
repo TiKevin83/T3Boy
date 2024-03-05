@@ -6,12 +6,16 @@ import { BIOSLoader } from "~/components/BIOSLoader/BIOSLoader";
 import { useControls } from "~/components/Controls/useControls";
 import { SaveState } from "~/components/SaveState/SaveState";
 import CRC32 from "crc-32";
-import ControlRemapButtons from "~/components/Controls/ControlRemapButtons";
+import KeyboardRemapButtons from "~/components/Controls/KeyboardRemapButtons";
 import { GameSave } from "~/components/GameSave/GameSave";
 import { FaPatreon } from "react-icons/fa";
 import { FaYoutube } from "react-icons/fa";
 import { FaTwitch } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
+import ControllerRemapButtons from "~/components/Controls/ControllerRemapButtons";
+import { useSession } from "next-auth/react";
+import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
+import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
 
 declare const Module: {
   onRuntimeInitialized: () => void;
@@ -41,6 +45,9 @@ export default function Home() {
   const [gameHash, setGameHash] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(true);
   useControls(initialized, gbPointer);
+  const { data: sessionData } = useSession();
+  const windowSize = useEmuWindowSizeStore((state) => state.windowSize);
+  const [actualDevicePixelRatio, setActualDevicePixelRatio] = useState(1);
 
   useEffect(() => {
     if (!initialized) {
@@ -49,6 +56,10 @@ export default function Home() {
     const gambatte_revision = Module.cwrap("gambatte_revision", "number");
     console.log("revision: " + (gambatte_revision() as number));
   }, [initialized]);
+
+  useEffect(() => {
+    setActualDevicePixelRatio(window.devicePixelRatio);
+  }, []);
 
   useEffect(() => {
     if (!romData || !biosData || !canvasRef.current) {
@@ -211,7 +222,7 @@ export default function Home() {
         <meta name="description" content="A GB/GBC Emulator Web Frontend" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className=" flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] font-mono">
         <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 ">
           <div className="flex w-full justify-end space-x-4 text-3xl text-white">
             <a href="https://www.patreon.com/TiKevin83Speedruns">
@@ -246,7 +257,9 @@ export default function Home() {
                 {initialized && (
                   <>
                     <div className="flex flex-col">
-                      <p className="text-2xl text-white">Core Emulator Setup</p>
+                      <p className="border-b border-solid p-1 text-2xl text-white">
+                        Core Emulator Setup
+                      </p>
                       <ROMLoader
                         setRomData={setRomData}
                         gameHash={gameHash ?? undefined}
@@ -255,13 +268,26 @@ export default function Home() {
                     </div>
                   </>
                 )}
-                {gameHash && initialized && (
-                  <>
-                    <GameSave gbPointer={gbPointer} gameHash={gameHash} />
-                    <SaveState gbPointer={gbPointer} gameHash={gameHash} />
-                  </>
+                {sessionData ? (
+                  gameHash &&
+                  initialized && (
+                    <>
+                      <GameSave gbPointer={gbPointer} gameHash={gameHash} />
+                      <SaveState gbPointer={gbPointer} gameHash={gameHash} />
+                    </>
+                  )
+                ) : (
+                  <div className="flex flex-col">
+                    <p className="border-b border-solid p-1 text-2xl text-white">
+                      Log In to use Cloud Saving and Savestates
+                    </p>
+                  </div>
                 )}
-                <ControlRemapButtons />
+              </div>
+              <div className="flex flex-row space-x-4">
+                <KeyboardRemapButtons />
+                <ControllerRemapButtons />
+                <EmuWindowSize />
               </div>
             </>
           )}
@@ -270,8 +296,12 @@ export default function Home() {
             <canvas
               ref={canvasRef}
               id="gameboy"
-              width="160"
-              height="144"
+              width={160}
+              height={144}
+              style={{
+                width: `${(windowSize * 160) / actualDevicePixelRatio}px`,
+                height: `${(windowSize * 144) / actualDevicePixelRatio}px`,
+              }}
             ></canvas>
           </div>
           <div className="flex flex-col items-center gap-2">

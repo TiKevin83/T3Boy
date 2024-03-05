@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { GameBoyKey, useKeyMappingStore } from "./useKeyMappingStore";
 
-const ControlRemapButtons: React.FC = () => {
+const KeyboardRemapButtons: React.FC = () => {
   const [showKeyMapping, setShowKeyMapping] = useState(false);
   const { keyMapping, setKeyMapping, setKeyMappingInProgress } =
     useKeyMappingStore((state) => ({
@@ -27,7 +27,7 @@ const ControlRemapButtons: React.FC = () => {
   return (
     <div>
       <button
-        className="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:placeholder-gray-400"
+        className="mt-2 block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:placeholder-gray-400"
         onClick={() => {
           setShowKeyMapping((currentShowKeyMapping) => {
             return !currentShowKeyMapping;
@@ -53,4 +53,4 @@ const ControlRemapButtons: React.FC = () => {
   );
 };
 
-export default ControlRemapButtons;
+export default KeyboardRemapButtons;

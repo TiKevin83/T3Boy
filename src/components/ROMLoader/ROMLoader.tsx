@@ -16,7 +16,7 @@ export const ROMLoader: React.FC<Props> = ({ setRomData, gameHash }) => {
   return (
     <div>
       <label
-        className="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
+        className="mt-2 block text-sm font-medium text-gray-900 dark:text-white"
         htmlFor="gameRom"
       >
         Game ROM

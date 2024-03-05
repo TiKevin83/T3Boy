@@ -222,9 +222,9 @@ export default function Home() {
         <meta name="description" content="A GB/GBC Emulator Web Frontend" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] font-mono">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 ">
-          <div className="flex w-full justify-end space-x-4 text-3xl text-white">
+      <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
+        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-4 ">
+          <div className="absolute top-0 mr-4 mt-4 flex w-full justify-end space-x-4 text-3xl text-white">
             <a href="https://www.patreon.com/TiKevin83Speedruns">
               <FaPatreon />
             </a>

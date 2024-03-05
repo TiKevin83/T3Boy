@@ -9,7 +9,7 @@ interface WindowSizeState {
 export const useEmuWindowSizeStore = create<WindowSizeState>()(
   persist(
     (set) => ({
-      windowSize: 1,
+      windowSize: 4,
       setWindowSize: (newWindowSize) => {
         set({ windowSize: newWindowSize });
       },

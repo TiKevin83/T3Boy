@@ -41,6 +41,7 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
   const { controllerMapping } = useControllerMappingStore((state) => ({
     controllerMapping: state.controllerMapping,
   }));
+  const [needToReset, setNeedToReset] = useState(false);
 
   const keyDownHandler = useCallback(
     (event: KeyboardEvent) => {
@@ -62,20 +63,7 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
         (Number(event.code === keyMapping.up) * GameBoyButton.UP) |
         (Number(event.code === keyMapping.down) * GameBoyButton.DOWN);
     },
-    [
-      keyMappingInProgress,
-      keyMapping.reset,
-      keyMapping.a,
-      keyMapping.b,
-      keyMapping.select,
-      keyMapping.start,
-      keyMapping.right,
-      keyMapping.left,
-      keyMapping.up,
-      keyMapping.down,
-      gambatteReset,
-      gbPointer,
-    ],
+    [keyMappingInProgress, keyMapping, gambatteReset, gbPointer],
   );
 
   const keyUpHandler = useCallback(
@@ -91,16 +79,7 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
         (Number(event.code !== keyMapping.up) * 0x40) |
         (Number(event.code !== keyMapping.down) * 0x80);
     },
-    [
-      keyMapping.a,
-      keyMapping.b,
-      keyMapping.down,
-      keyMapping.left,
-      keyMapping.right,
-      keyMapping.select,
-      keyMapping.start,
-      keyMapping.up,
-    ],
+    [keyMapping],
   );
 
   useEffect(() => {
@@ -114,56 +93,70 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
         "number",
       ]),
     );
-    setButtonsFunctionPointer(
-      Module.addFunction(() => {
-        // modeled from https://github.com/whoisryosuke/react-gamepads
-        let controllerButtons = 0;
-        // Grab gamepads from browser API
-        const detectedGamepads = navigator.getGamepads();
-
-        // Loop through all detected controllers and add if not already in state
-        detectedGamepads.forEach((gamepad) => {
-          if (gamepad !== null) {
-            controllerButtons =
-              (Number(gamepad.buttons[controllerMapping.a]?.pressed) *
-                GameBoyButton.A) |
-              (Number(gamepad.buttons[controllerMapping.b]?.pressed) *
-                GameBoyButton.B) |
-              (Number(gamepad.buttons[controllerMapping.start]?.pressed) *
-                GameBoyButton.START) |
-              (Number(gamepad.buttons[controllerMapping.select]?.pressed) *
-                GameBoyButton.SELECT) |
-              (Number(gamepad.buttons[controllerMapping.up]?.pressed) *
-                GameBoyButton.UP) |
-              (Number(gamepad.buttons[controllerMapping.down]?.pressed) *
-                GameBoyButton.DOWN) |
-              (Number(gamepad.buttons[controllerMapping.left]?.pressed) *
-                GameBoyButton.LEFT) |
-              (Number(gamepad.buttons[controllerMapping.right]?.pressed) *
-                GameBoyButton.RIGHT);
-            if (
-              gambatteReset &&
-              gamepad.buttons[controllerMapping.reset]?.pressed
-            ) {
-              console.log("got here");
-              gambatteReset(gbPointer, 101 * (2 << 14));
-            }
-          }
-        });
-
-        return buttons.current | controllerButtons;
-      }, "ii"),
-    );
     setGambatteReset(() =>
       Module.cwrap("gambatte_reset", null, ["number", "number"]),
     );
+  }, [initialized]);
+
+  const getButtonsFunction = useCallback(() => {
+    // modeled from https://github.com/whoisryosuke/react-gamepads
+    let controllerButtons = 0;
+    // Grab gamepads from browser API
+    const detectedGamepads = navigator.getGamepads();
+
+    // Loop through all detected controllers and add if not already in state
+    detectedGamepads.forEach((gamepad) => {
+      if (gamepad !== null) {
+        controllerButtons =
+          (Number(gamepad.buttons[controllerMapping.a]?.pressed) *
+            GameBoyButton.A) |
+          (Number(gamepad.buttons[controllerMapping.b]?.pressed) *
+            GameBoyButton.B) |
+          (Number(gamepad.buttons[controllerMapping.start]?.pressed) *
+            GameBoyButton.START) |
+          (Number(gamepad.buttons[controllerMapping.select]?.pressed) *
+            GameBoyButton.SELECT) |
+          (Number(gamepad.buttons[controllerMapping.up]?.pressed) *
+            GameBoyButton.UP) |
+          (Number(gamepad.buttons[controllerMapping.down]?.pressed) *
+            GameBoyButton.DOWN) |
+          (Number(gamepad.buttons[controllerMapping.left]?.pressed) *
+            GameBoyButton.LEFT) |
+          (Number(gamepad.buttons[controllerMapping.right]?.pressed) *
+            GameBoyButton.RIGHT);
+        if (
+          gambatteReset &&
+          gamepad.buttons[controllerMapping.reset]?.pressed
+        ) {
+          setNeedToReset(true);
+        }
+      }
+    });
+
+    return buttons.current | controllerButtons;
+  }, [controllerMapping, gambatteReset]);
+
+  useEffect(() => {
+    if (gambatteReset && needToReset) {
+      gambatteReset(gbPointer, 101 * (2 << 14));
+    }
+    setNeedToReset(false);
+  }, [gambatteReset, gbPointer, needToReset]);
+
+  useEffect(() => {
+    if (!initialized) {
+      return;
+    }
+
+    setButtonsFunctionPointer(Module.addFunction(getButtonsFunction, "ii"));
+
     return () => {
       if (buttonsFunctionPointer) {
         Module._free(buttonsFunctionPointer);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, controllerMapping, gbPointer]);
+  }, [initialized, getButtonsFunction]);
 
   useEffect(() => {
     if (

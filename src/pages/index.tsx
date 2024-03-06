@@ -235,7 +235,7 @@ export default function Home() {
             <a href="https://www.twitch.tv/tikevin83">
               <FaTwitch />
             </a>
-            <a href="https://github.com/TiKevin83/gambatte-core">
+            <a href="https://github.com/TiKevin83/T3Boy">
               <FaGithub />
             </a>
           </div>

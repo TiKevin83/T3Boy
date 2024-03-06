@@ -16,6 +16,7 @@ import ControllerRemapButtons from "~/components/Controls/ControllerRemapButtons
 import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
 import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
+import { loadBindings } from "next/dist/build/swc";
 
 declare const Module: {
   onRuntimeInitialized: () => void;
@@ -254,20 +255,20 @@ export default function Home() {
           {showOptions && (
             <>
               <div className="flex flex-row space-x-4">
-                {initialized && (
-                  <>
-                    <div className="flex flex-col">
-                      <p className="border-b border-solid p-1 text-2xl text-white">
-                        Core Emulator Setup
-                      </p>
+                <div className="flex flex-col">
+                  <p className="border-b border-solid p-1 text-2xl text-white">
+                    {initialized ? "Core Emulator Setup" : "Loading..."}
+                  </p>
+                  {initialized && (
+                    <>
                       <ROMLoader
                         setRomData={setRomData}
                         gameHash={gameHash ?? undefined}
                       />
                       <BIOSLoader setBiosData={setBiosData} />
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
                 {sessionData ? (
                   gameHash &&
                   initialized && (

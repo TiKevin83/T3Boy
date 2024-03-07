@@ -196,20 +196,21 @@ export default function Home() {
 
       // process audio output
 
-      // divide by 2 channels, 2 bytes per 16 bit signed, and 4 to naively resample to 524k
+      // divide by 2 channels, 2 bytes per 16 bit signed, and 16 to naively resample to 131k
       const audioSamples = audioContext.createBuffer(
         2,
-        bytesProduced / 16,
-        2097152 / 4,
+        bytesProduced / 64,
+        2097152 / 16,
       );
       const channel1Samples = audioSamples.getChannelData(0);
       const channel2Samples = audioSamples.getChannelData(1);
       for (let sample = 0; sample < channel1Samples.length; sample++) {
-        // inverse of the division by 16 when creating the buffer size, same logic
+        // inverse of the division by 64 when creating the buffer size, same logic
+        // We also need to divide by 32768 to convert from signed 16 bit to float
         channel1Samples[sample] =
-          Module.getValue(audioBufferPointer + sample * 16, "i16") / 32768.0;
+          Module.getValue(audioBufferPointer + sample * 64, "i16") / 32768.0;
         channel2Samples[sample] =
-          Module.getValue(audioBufferPointer + sample * 16 + 2, "i16") /
+          Module.getValue(audioBufferPointer + sample * 64 + 2, "i16") /
           32768.0;
       }
 

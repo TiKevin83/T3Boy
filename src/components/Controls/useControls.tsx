@@ -148,14 +148,16 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
       return;
     }
 
-    setButtonsFunctionPointer(Module.addFunction(getButtonsFunction, "ii"));
+    const newButtonsFunctionPointer = Module.addFunction(
+      getButtonsFunction,
+      "ii",
+    );
+
+    setButtonsFunctionPointer(newButtonsFunctionPointer);
 
     return () => {
-      if (buttonsFunctionPointer) {
-        Module._free(buttonsFunctionPointer);
-      }
+      Module._free(newButtonsFunctionPointer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, getButtonsFunction]);
 
   useEffect(() => {

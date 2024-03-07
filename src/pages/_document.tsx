@@ -24,7 +24,7 @@ export default function Document() {
             <ul className="mt-3 flex flex-wrap items-center text-sm font-medium text-gray-500 sm:mt-0 dark:text-gray-400">
               <li>
                 <p className="me-4 md:me-6">
-                  T3Boy uses Posthog for Anonymous, GDPR compliant analytics
+                  T3Boy uses Posthog for anonymous, GDPR compliant analytics
                 </p>
               </li>
             </ul>

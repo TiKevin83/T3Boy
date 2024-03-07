@@ -16,7 +16,6 @@ import ControllerRemapButtons from "~/components/Controls/ControllerRemapButtons
 import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
 import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
-import { loadBindings } from "next/dist/build/swc";
 
 declare const Module: {
   onRuntimeInitialized: () => void;
@@ -39,7 +38,14 @@ export default function Home() {
       setInitialized(true);
     }, 3000);
   }, []);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [gambatteCreate, setGambatteCreate] =
+    useState<(...args: unknown[]) => unknown>();
+  const [gambatteLoadBuf, setGambatteLoadBuf] =
+    useState<(...args: unknown[]) => unknown>();
+  const [gambatteLoadBiosBuf, setGambatteLoadBiosBuf] =
+    useState<(...args: unknown[]) => unknown>();
+  const [gambatteRunFor, setGambatteRunFor] =
+    useState<(...args: unknown[]) => unknown>();
   const [romData, setRomData] = useState<ArrayBuffer | null>(null);
   const [biosData, setBiosData] = useState<ArrayBuffer | null>(null);
   const [gbPointer, setGbPointer] = useState<number | undefined>(undefined);
@@ -49,6 +55,8 @@ export default function Home() {
   const { data: sessionData } = useSession();
   const windowSize = useEmuWindowSizeStore((state) => state.windowSize);
   const [actualDevicePixelRatio, setActualDevicePixelRatio] = useState(1);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [volume, setVolume] = useState(0.01);
 
   useEffect(() => {
     if (!initialized) {
@@ -63,48 +71,87 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!romData || !biosData || !canvasRef.current) {
+    setGambatteCreate(() => {
+      return Module.cwrap("gambatte_create", "number");
+    });
+    setGambatteLoadBuf(() => {
+      return Module.cwrap("gambatte_loadbuf", "number", [
+        "number",
+        "number",
+        "number",
+        "number",
+      ]);
+    });
+    setGambatteLoadBiosBuf(() => {
+      return Module.cwrap("gambatte_loadbiosbuf", "number", [
+        "number",
+        "number",
+        "number",
+      ]);
+    });
+    setGambatteRunFor(() => {
+      return Module.cwrap("gambatte_runfor", "number", [
+        "number",
+        "number",
+        "number",
+        "number",
+        "number",
+      ]);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!gambatteCreate) {
       return;
     }
-    const gambatte_create = Module.cwrap("gambatte_create", "number");
-    const gambatte_loadbuf = Module.cwrap("gambatte_loadbuf", "number", [
-      "number",
-      "number",
-      "number",
-      "number",
-    ]);
-    const gambatte_loadbiosbuf = Module.cwrap(
-      "gambatte_loadbiosbuf",
-      "number",
-      ["number", "number", "number"],
-    );
-    const gambatte_runfor = Module.cwrap("gambatte_runfor", "number", [
-      "number",
-      "number",
-      "number",
-      "number",
-      "number",
-    ]);
+    const gb = gambatteCreate() as number;
+    setGbPointer(gb);
+    return () => {
+      Module._free(gb);
+    };
+  }, [gambatteCreate]);
 
-    const videoBufferPointer = Module._malloc(160 * 144 * 4);
-    const audioBufferPointer = Module._malloc((35112 + 2064) * 4);
-    const samplesEmittedPointer = Module._malloc(4);
+  useEffect(() => {
+    if (!romData || !biosData || !gambatteLoadBuf || !gambatteLoadBiosBuf) {
+      return;
+    }
 
     const romDataUint8 = new Uint8Array(romData);
     setGameHash((CRC32.buf(romDataUint8) >>> 0).toString(16));
     const biosDataUint8 = new Uint8Array(biosData);
-    const gb = gambatte_create() as number;
-    setGbPointer(gb);
 
     const romDataPointer = Module._malloc(romData.byteLength);
     Module.HEAPU8.set(romDataUint8, romDataPointer);
-    gambatte_loadbuf(gb, romDataPointer, romData.byteLength, 3);
+    gambatteLoadBuf(gbPointer, romDataPointer, romData.byteLength, 3);
     Module._free(romDataPointer);
 
     const biosDataPointer = Module._malloc(romData.byteLength);
     Module.HEAPU8.set(biosDataUint8, biosDataPointer);
-    gambatte_loadbiosbuf(gb, biosDataPointer, biosData.byteLength);
+    gambatteLoadBiosBuf(gbPointer, biosDataPointer, biosData.byteLength);
     Module._free(biosDataPointer);
+  }, [
+    biosData,
+    gambatteCreate,
+    gambatteLoadBiosBuf,
+    gambatteLoadBuf,
+    gbPointer,
+    romData,
+  ]);
+
+  useEffect(() => {
+    if (
+      !romData ||
+      !biosData ||
+      !canvasRef.current ||
+      !gbPointer ||
+      !gambatteRunFor
+    ) {
+      return;
+    }
+
+    const videoBufferPointer = Module._malloc(160 * 144 * 4);
+    const audioBufferPointer = Module._malloc((35112 + 2064) * 4);
+    const samplesEmittedPointer = Module._malloc(4);
 
     const backbuffer = new ImageData(160, 144);
 
@@ -123,7 +170,7 @@ export default function Home() {
 
     // reduce volume
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = 0.01; // 1 %
+    gainNode.gain.value = volume;
     gainNode.connect(audioContext.destination);
 
     const cyclesPerFrame = 35112;
@@ -138,8 +185,8 @@ export default function Home() {
         return;
       }
       Module.setValue(samplesEmittedPointer, cyclesPerFrame, "i32");
-      gambatte_runfor(
-        gb,
+      gambatteRunFor(
+        gbPointer,
         videoBufferPointer,
         160,
         audioBufferPointer,
@@ -214,7 +261,7 @@ export default function Home() {
       void audioContext.close();
       document.removeEventListener("visibilitychange", visibilityChangeHandler);
     };
-  }, [romData, biosData]);
+  }, [romData, biosData, gbPointer, gambatteRunFor, volume]);
 
   return (
     <>
@@ -304,6 +351,20 @@ export default function Home() {
                 height: `${(windowSize * 144) / actualDevicePixelRatio}px`,
               }}
             ></canvas>
+            <label htmlFor="Volume" className="text-white">
+              Volume
+            </label>
+            <input
+              id="Volume"
+              type="range"
+              min="0"
+              max="1"
+              step=".01"
+              value={volume}
+              onChange={(event) => {
+                setVolume(Number(event.target.value));
+              }}
+            ></input>
           </div>
           <div className="flex flex-col items-center gap-2">
             <AuthShowcase />

@@ -71,6 +71,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!initialized) {
+      return;
+    }
     setGambatteCreate(() => {
       return Module.cwrap("gambatte_create", "number");
     });
@@ -98,7 +101,7 @@ export default function Home() {
         "number",
       ]);
     });
-  }, []);
+  }, [initialized]);
 
   useEffect(() => {
     if (!gambatteCreate) {

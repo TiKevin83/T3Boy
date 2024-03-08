@@ -6,13 +6,13 @@ https://t3boy.vercel.app/
 
 ## Usage
 
-Upload a Game Boy or Game Boy Color ROM, along with a copy of the Game Boy Color BIOS, often called gbc_bios.bin - The BIOS is necessary due to the accuracy focus of the emulator. Once those are uploaded, the game can be played using keyboard controls, which can be remapped to your liking in the options menu. During gameplay you can minimize the options menu by clicking "hide options".
+Upload a Game Boy or Game Boy Color ROM, along with a copy of the Game Boy Color BIOS, often called gbc_bios.bin - The BIOS is necessary due to the accuracy focus of the emulator. Once those are uploaded, the game can be played using keyboard controls, which can be remapped to your liking in the options menu. Likewise controller input is usable over the Gamepad API and remappable in the options menu. During gameplay you can minimize the options menu by clicking "hide options".
 
 ## Disclaimers
 
 ### Posthog Anonymized Data
 
-T3Boy uses Posthog to collect fully anonymized and GDPR compliant page view information to best understand which how much active use it sees to allocate maintenance and which sources are referring traffic.
+T3Boy uses Posthog to collect fully anonymized and GDPR compliant page view information to best understand how much active use it sees, allocate maintenance, and see which sources are referring traffic.
 
 ### GPL v3
 

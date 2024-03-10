@@ -16,6 +16,7 @@ import ControllerRemapButtons from "~/components/Controls/ControllerRemapButtons
 import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
 import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
+import { ColorEmulation } from "~/components/GBCColors/ColorEmulation";
 
 declare const Module: {
   onRuntimeInitialized: () => void;
@@ -227,7 +228,6 @@ export default function Home() {
           : time + lastBufferDuration;
       lastBufferDuration = source.buffer.duration;
       source.start(time);
-
       // process video output
       for (let i = 0; i < backbuffer.data.length; i += 4) {
         const pixel = Module.getValue(videoBufferPointer + i, "i32");
@@ -343,6 +343,7 @@ export default function Home() {
                 <KeyboardRemapButtons />
                 <ControllerRemapButtons />
                 <EmuWindowSize />
+                {initialized && <ColorEmulation gbPointer={gbPointer} />}
               </div>
             </>
           )}

@@ -8,7 +8,7 @@ import { SaveState } from "~/components/SaveState/SaveState";
 import CRC32 from "crc-32";
 import KeyboardRemapButtons from "~/components/Controls/KeyboardRemapButtons";
 import { GameSave } from "~/components/GameSave/GameSave";
-import { FaPatreon } from "react-icons/fa";
+import { FaDiscord, FaPatreon } from "react-icons/fa";
 import { FaYoutube } from "react-icons/fa";
 import { FaTwitch } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
@@ -280,6 +280,9 @@ export default function Home() {
             <a href="https://www.patreon.com/TiKevin83Speedruns">
               <FaPatreon />
             </a>
+            <a href="https://discord.com/invite/qMChgqkSET">
+              <FaDiscord />
+            </a>
             <a href="https://www.youtube.com/@TiKevin83">
               <FaYoutube />
             </a>
@@ -290,7 +293,7 @@ export default function Home() {
               <FaGithub />
             </a>
           </div>
-          <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
+          <h1 className="mt-8 text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
             T3Boy
           </h1>
           <button

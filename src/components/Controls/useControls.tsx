@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useKeyMappingStore } from "./useKeyMappingStore";
 import { useControllerMappingStore } from "./useControllerMappingStore";
+import { useDisplayedButtonsStore } from "./useDisplayedButtonsStore";
+import { useTouchButtonsStore } from "./useTouchButtonsStore";
 
 declare const Module: {
   cwrap: (
@@ -34,6 +36,21 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
     ((...args: unknown[]) => unknown) | null
   >(null);
   const buttons = useRef(0);
+  const { addDisplayedButton, removeDisplayedButton } =
+    useDisplayedButtonsStore((state) => ({
+      addDisplayedButton: state.addDisplayedButton,
+      removeDisplayedButton: state.removeDisplayedButton,
+    }));
+  // Fetch initial state
+  const touchButtonsRef = useRef(useTouchButtonsStore.getState().touchButtons);
+  // Connect to the store on mount, disconnect on unmount, catch state-changes in a reference
+  useEffect(
+    () =>
+      useTouchButtonsStore.subscribe(
+        (state) => (touchButtonsRef.current = state.touchButtons),
+      ),
+    [],
+  );
   const { keyMapping, keyMappingInProgress } = useKeyMappingStore((state) => ({
     keyMapping: state.keyMapping,
     keyMappingInProgress: state.keyMappingInProgress,
@@ -53,33 +70,93 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
         gambatteReset(gbPointer, 101 * (2 << 14));
         return;
       }
-      buttons.current |=
-        (Number(event.code === keyMapping.a) * GameBoyButton.A) |
-        (Number(event.code === keyMapping.b) * GameBoyButton.B) |
-        (Number(event.code === keyMapping.select) * GameBoyButton.SELECT) |
-        (Number(event.code === keyMapping.start) * GameBoyButton.START) |
-        (Number(event.code === keyMapping.right) * GameBoyButton.RIGHT) |
-        (Number(event.code === keyMapping.left) * GameBoyButton.LEFT) |
-        (Number(event.code === keyMapping.up) * GameBoyButton.UP) |
-        (Number(event.code === keyMapping.down) * GameBoyButton.DOWN);
+      switch (event.code) {
+        case keyMapping.a:
+          addDisplayedButton(GameBoyButton.A);
+          buttons.current |= GameBoyButton.A;
+          break;
+        case keyMapping.b:
+          addDisplayedButton(GameBoyButton.B);
+          buttons.current |= GameBoyButton.B;
+          break;
+        case keyMapping.select:
+          addDisplayedButton(GameBoyButton.SELECT);
+          buttons.current |= GameBoyButton.SELECT;
+          break;
+        case keyMapping.start:
+          addDisplayedButton(GameBoyButton.START);
+          buttons.current |= GameBoyButton.START;
+          break;
+        case keyMapping.right:
+          addDisplayedButton(GameBoyButton.RIGHT);
+          buttons.current |= GameBoyButton.RIGHT;
+          break;
+        case keyMapping.left:
+          addDisplayedButton(GameBoyButton.LEFT);
+          buttons.current |= GameBoyButton.LEFT;
+          break;
+        case keyMapping.up:
+          addDisplayedButton(GameBoyButton.UP);
+          buttons.current |= GameBoyButton.UP;
+          break;
+        case keyMapping.down:
+          addDisplayedButton(GameBoyButton.DOWN);
+          buttons.current |= GameBoyButton.DOWN;
+          break;
+        default:
+          break;
+      }
     },
-    [keyMappingInProgress, keyMapping, gambatteReset, gbPointer],
+    [
+      keyMappingInProgress,
+      keyMapping,
+      gambatteReset,
+      gbPointer,
+      addDisplayedButton,
+    ],
   );
 
   const keyUpHandler = useCallback(
     (event: KeyboardEvent) => {
       event.preventDefault();
-      buttons.current &=
-        (Number(event.code !== keyMapping.a) * 0x01) |
-        (Number(event.code !== keyMapping.b) * 0x02) |
-        (Number(event.code !== keyMapping.select) * 0x04) |
-        (Number(event.code !== keyMapping.start) * 0x08) |
-        (Number(event.code !== keyMapping.right) * 0x10) |
-        (Number(event.code !== keyMapping.left) * 0x20) |
-        (Number(event.code !== keyMapping.up) * 0x40) |
-        (Number(event.code !== keyMapping.down) * 0x80);
+      switch (event.code) {
+        case keyMapping.a:
+          removeDisplayedButton(GameBoyButton.A);
+          buttons.current &= ~GameBoyButton.A;
+          break;
+        case keyMapping.b:
+          removeDisplayedButton(GameBoyButton.B);
+          buttons.current &= ~GameBoyButton.B;
+          break;
+        case keyMapping.select:
+          removeDisplayedButton(GameBoyButton.SELECT);
+          buttons.current &= ~GameBoyButton.SELECT;
+          break;
+        case keyMapping.start:
+          removeDisplayedButton(GameBoyButton.START);
+          buttons.current &= ~GameBoyButton.START;
+          break;
+        case keyMapping.right:
+          removeDisplayedButton(GameBoyButton.RIGHT);
+          buttons.current &= ~GameBoyButton.RIGHT;
+          break;
+        case keyMapping.left:
+          removeDisplayedButton(GameBoyButton.LEFT);
+          buttons.current &= ~GameBoyButton.LEFT;
+          break;
+        case keyMapping.up:
+          removeDisplayedButton(GameBoyButton.UP);
+          buttons.current &= ~GameBoyButton.UP;
+          break;
+        case keyMapping.down:
+          removeDisplayedButton(GameBoyButton.DOWN);
+          buttons.current &= ~GameBoyButton.DOWN;
+          break;
+        default:
+          break;
+      }
     },
-    [keyMapping],
+    [keyMapping, removeDisplayedButton],
   );
 
   useEffect(() => {
@@ -133,7 +210,7 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
       }
     });
 
-    return buttons.current | controllerButtons;
+    return buttons.current | controllerButtons | touchButtonsRef.current;
   }, [controllerMapping, gambatteReset]);
 
   useEffect(() => {

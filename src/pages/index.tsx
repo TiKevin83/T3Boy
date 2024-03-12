@@ -17,6 +17,8 @@ import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
 import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
 import { ColorEmulation } from "~/components/GBCColors/ColorEmulation";
+import { DPad } from "~/components/Controls/DPad";
+import { ABStartSelect } from "~/components/Controls/ABStartSelect";
 
 declare const Module: {
   onRuntimeInitialized: () => void;
@@ -347,18 +349,22 @@ export default function Home() {
               </div>
             </>
           )}
-          <div className="flex flex-col items-center gap-2">
+          <div className="pointer-events-none flex touch-none flex-col items-center gap-2">
             <p className="text-white">{gameHash?.toUpperCase()}</p>
-            <canvas
-              ref={canvasRef}
-              id="gameboy"
-              width={160}
-              height={144}
-              style={{
-                width: `${(windowSize * 160) / actualDevicePixelRatio}px`,
-                height: `${(windowSize * 144) / actualDevicePixelRatio}px`,
-              }}
-            ></canvas>
+            <div className="flex flex-row">
+              <DPad />
+              <canvas
+                ref={canvasRef}
+                id="gameboy"
+                width={160}
+                height={144}
+                style={{
+                  width: `${(windowSize * 160) / actualDevicePixelRatio}px`,
+                  height: `${(windowSize * 144) / actualDevicePixelRatio}px`,
+                }}
+              ></canvas>
+              <ABStartSelect />
+            </div>
             <label htmlFor="Volume" className="text-white">
               Volume
             </label>
@@ -372,6 +378,7 @@ export default function Home() {
               onChange={(event) => {
                 setVolume(Number(event.target.value));
               }}
+              className="pointer-events-auto touch-auto"
             ></input>
           </div>
           <div className="flex flex-col items-center gap-2">

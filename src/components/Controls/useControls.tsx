@@ -51,6 +51,10 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
       ),
     [],
   );
+  const { touchReset, endTouchReset } = useTouchButtonsStore((state) => ({
+    touchReset: state.touchReset,
+    endTouchReset: state.endTouchReset,
+  }));
   const { keyMapping, keyMappingInProgress } = useKeyMappingStore((state) => ({
     keyMapping: state.keyMapping,
     keyMappingInProgress: state.keyMappingInProgress,
@@ -59,6 +63,13 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
     controllerMapping: state.controllerMapping,
   }));
   const [needToReset, setNeedToReset] = useState(false);
+
+  useEffect(() => {
+    if (touchReset && gambatteReset) {
+      gambatteReset(gbPointer, 101 * (2 << 14));
+      endTouchReset();
+    }
+  }, [touchReset, endTouchReset, gbPointer, gambatteReset]);
 
   const keyDownHandler = useCallback(
     (event: KeyboardEvent) => {

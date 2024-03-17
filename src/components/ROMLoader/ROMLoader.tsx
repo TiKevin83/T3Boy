@@ -1,15 +1,15 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useFileStore } from "../FileStore/useFileStore";
 
 interface Props {
-  setRomData: Dispatch<SetStateAction<ArrayBuffer | null>>;
   gameHash?: string;
 }
 
-export const ROMLoader: React.FC<Props> = ({ setRomData, gameHash }) => {
+export const ROMLoader: React.FC<Props> = ({ gameHash }) => {
+  const setRom = useFileStore((state) => state.setRom);
   const handleROMChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const romFile = e.target.files?.[0];
     void romFile?.arrayBuffer().then((arrayBuffer) => {
-      setRomData(arrayBuffer);
+      setRom(JSON.stringify(Array.from(new Uint8Array(arrayBuffer))));
     });
   };
 

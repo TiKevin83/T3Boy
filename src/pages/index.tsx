@@ -8,10 +8,15 @@ import { SaveState } from "~/components/SaveState/SaveState";
 import CRC32 from "crc-32";
 import KeyboardRemapButtons from "~/components/Controls/KeyboardRemapButtons";
 import { GameSave } from "~/components/GameSave/GameSave";
-import { FaDiscord, FaPatreon } from "react-icons/fa";
-import { FaYoutube } from "react-icons/fa";
-import { FaTwitch } from "react-icons/fa";
-import { FaGithub } from "react-icons/fa";
+import {
+  FaDiscord,
+  FaPatreon,
+  FaPause,
+  FaPlay,
+  FaYoutube,
+  FaTwitch,
+  FaGithub,
+} from "react-icons/fa";
 import ControllerRemapButtons from "~/components/Controls/ControllerRemapButtons";
 import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
@@ -19,6 +24,7 @@ import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
 import { ColorEmulation } from "~/components/GBCColors/ColorEmulation";
 import { DPad } from "~/components/Controls/DPad";
 import { ABStartSelect } from "~/components/Controls/ABStartSelect";
+import { useFileStore } from "~/components/FileStore/useFileStore";
 
 declare const Module: {
   onRuntimeInitialized: () => void;
@@ -49,8 +55,10 @@ export default function Home() {
     useState<(...args: unknown[]) => unknown>();
   const [gambatteRunFor, setGambatteRunFor] =
     useState<(...args: unknown[]) => unknown>();
-  const [romData, setRomData] = useState<ArrayBuffer | null>(null);
-  const [biosData, setBiosData] = useState<ArrayBuffer | null>(null);
+  const { rom, bios } = useFileStore((state) => ({
+    rom: state.rom,
+    bios: state.bios,
+  }));
   const [gbPointer, setGbPointer] = useState<number | undefined>(undefined);
   const [gameHash, setGameHash] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(true);
@@ -60,6 +68,7 @@ export default function Home() {
   const [actualDevicePixelRatio, setActualDevicePixelRatio] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [volume, setVolume] = useState(0.01);
+  const [play, setPlay] = useState(false);
 
   useEffect(() => {
     if (!initialized) {
@@ -118,39 +127,48 @@ export default function Home() {
   }, [gambatteCreate]);
 
   useEffect(() => {
-    if (!romData || !biosData || !gambatteLoadBuf || !gambatteLoadBiosBuf) {
+    if (
+      !rom ||
+      !bios ||
+      !gambatteLoadBuf ||
+      !gambatteLoadBiosBuf ||
+      !gbPointer
+    ) {
       return;
     }
 
-    const romDataUint8 = new Uint8Array(romData);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const romDataUint8 = new Uint8Array(Array.from(JSON.parse(rom)));
     setGameHash((CRC32.buf(romDataUint8) >>> 0).toString(16));
-    const biosDataUint8 = new Uint8Array(biosData);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const biosDataUint8 = new Uint8Array(Array.from(JSON.parse(bios)));
 
-    const romDataPointer = Module._malloc(romData.byteLength);
+    const romDataPointer = Module._malloc(romDataUint8.byteLength);
     Module.HEAPU8.set(romDataUint8, romDataPointer);
-    gambatteLoadBuf(gbPointer, romDataPointer, romData.byteLength, 3);
+    gambatteLoadBuf(gbPointer, romDataPointer, romDataUint8.byteLength, 3);
     Module._free(romDataPointer);
 
-    const biosDataPointer = Module._malloc(romData.byteLength);
+    const biosDataPointer = Module._malloc(romDataUint8.byteLength);
     Module.HEAPU8.set(biosDataUint8, biosDataPointer);
-    gambatteLoadBiosBuf(gbPointer, biosDataPointer, biosData.byteLength);
+    gambatteLoadBiosBuf(gbPointer, biosDataPointer, biosDataUint8.byteLength);
     Module._free(biosDataPointer);
   }, [
-    biosData,
+    bios,
     gambatteCreate,
     gambatteLoadBiosBuf,
     gambatteLoadBuf,
     gbPointer,
-    romData,
+    rom,
   ]);
 
   useEffect(() => {
     if (
-      !romData ||
-      !biosData ||
+      !rom ||
+      !bios ||
       !canvasRef.current ||
       !gbPointer ||
-      !gambatteRunFor
+      !gambatteRunFor ||
+      !play
     ) {
       return;
     }
@@ -267,7 +285,7 @@ export default function Home() {
       void audioContext.close();
       document.removeEventListener("visibilitychange", visibilityChangeHandler);
     };
-  }, [romData, biosData, gbPointer, gambatteRunFor, volume]);
+  }, [rom, bios, gbPointer, gambatteRunFor, volume, play]);
 
   return (
     <>
@@ -317,11 +335,11 @@ export default function Home() {
                   </p>
                   {initialized && (
                     <>
-                      <ROMLoader
-                        setRomData={setRomData}
-                        gameHash={gameHash ?? undefined}
-                      />
-                      <BIOSLoader setBiosData={setBiosData} />
+                      <ROMLoader gameHash={gameHash ?? undefined} />
+                      <BIOSLoader />
+                      <p className="text-white">
+                        Click the play button below the game after loading
+                      </p>
                     </>
                   )}
                 </div>
@@ -365,21 +383,33 @@ export default function Home() {
               ></canvas>
               <ABStartSelect />
             </div>
-            <label htmlFor="Volume" className="text-white">
-              Volume
-            </label>
-            <input
-              id="Volume"
-              type="range"
-              min="0"
-              max="1"
-              step=".01"
-              value={volume}
-              onChange={(event) => {
-                setVolume(Number(event.target.value));
-              }}
-              className="pointer-events-auto touch-auto"
-            ></input>
+            <div className="flex flex-row">
+              <label htmlFor="Volume" className="mr-2 text-white">
+                Volume
+              </label>
+              <input
+                id="Volume"
+                type="range"
+                min="0"
+                max="1"
+                step=".01"
+                value={volume}
+                onChange={(event) => {
+                  setVolume(Number(event.target.value));
+                }}
+                className="pointer-events-auto touch-auto"
+              ></input>
+              <button
+                onClick={() => {
+                  setPlay((currentPlay) => {
+                    return !currentPlay;
+                  });
+                }}
+                className="text-md pointer-events-auto ml-4 block touch-auto font-medium text-gray-900 dark:text-white"
+              >
+                {play ? <FaPause /> : <FaPlay />}
+              </button>
+            </div>
           </div>
           <div className="flex flex-col items-center gap-2">
             <AuthShowcase />

@@ -1,14 +1,15 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useFileStore } from "../FileStore/useFileStore";
 
-interface Props {
-  setBiosData: Dispatch<SetStateAction<ArrayBuffer | null>>;
-}
-
-export const BIOSLoader: React.FC<Props> = ({ setBiosData }) => {
+export const BIOSLoader = () => {
+  const setBios = useFileStore((state) => state.setBios);
   const handleROMChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const biosFile = e.target.files?.[0];
     void biosFile?.arrayBuffer().then((arrayBuffer) => {
-      setBiosData(patchBiosForGbcGba(arrayBuffer));
+      setBios(
+        JSON.stringify(
+          Array.from(new Uint8Array(patchBiosForGbcGba(arrayBuffer))),
+        ),
+      );
     });
   };
 

@@ -25,6 +25,7 @@ import { ColorEmulation } from "~/components/GBCColors/ColorEmulation";
 import { DPad } from "~/components/Controls/DPad";
 import { ABStartSelect } from "~/components/Controls/ABStartSelect";
 import { useFileStore } from "~/components/FileStore/useFileStore";
+import { TASMovieLoader } from "~/components/TASMovieLoader/TASMovieLoader";
 
 declare const Module: {
   onRuntimeInitialized: () => void;
@@ -62,7 +63,8 @@ export default function Home() {
   const [gbPointer, setGbPointer] = useState<number | undefined>(undefined);
   const [gameHash, setGameHash] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(true);
-  useControls(initialized, gbPointer);
+  const totalSamplesEmitted = useRef(0);
+  useControls(initialized, totalSamplesEmitted, gbPointer);
   const { data: sessionData } = useSession();
   const windowSize = useEmuWindowSizeStore((state) => state.windowSize);
   const [actualDevicePixelRatio, setActualDevicePixelRatio] = useState(1);
@@ -216,7 +218,9 @@ export default function Home() {
         audioBufferPointer,
         samplesEmittedPointer,
       );
-      const bytesProduced = Module.getValue(samplesEmittedPointer, "i32") * 4;
+      const samplesProduced = Module.getValue(samplesEmittedPointer, "i32");
+      totalSamplesEmitted.current += samplesProduced;
+      const bytesProduced = samplesProduced * 4;
 
       // process audio output
 
@@ -340,6 +344,7 @@ export default function Home() {
                       <p className="text-white">
                         Click the play button below the game after loading
                       </p>
+                      <TASMovieLoader />
                     </>
                   )}
                 </div>

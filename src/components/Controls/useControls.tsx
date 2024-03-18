@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
 import { useKeyMappingStore } from "./useKeyMappingStore";
 import { useControllerMappingStore } from "./useControllerMappingStore";
 import { useDisplayedButtonsStore } from "./useDisplayedButtonsStore";
 import { useTouchButtonsStore } from "./useTouchButtonsStore";
+import { useFileStore } from "../FileStore/useFileStore";
 
 declare const Module: {
   cwrap: (
@@ -25,7 +33,11 @@ export enum GameBoyButton {
   DOWN = 0x80,
 }
 
-export const useControls = (initialized: boolean, gbPointer?: number) => {
+export const useControls = (
+  initialized: boolean,
+  totalSamplesEmitted: MutableRefObject<number>,
+  gbPointer?: number,
+) => {
   const [gambatteInputGetter, setGambatteInputGetter] = useState<
     ((...args: unknown[]) => unknown) | null
   >(null);
@@ -63,12 +75,36 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
     controllerMapping: state.controllerMapping,
   }));
   const [needToReset, setNeedToReset] = useState(false);
+  const gbiMovie = useFileStore((state) => state.gbiMovie);
+  const parsedGbiMovie: {
+    parsedTimestamps: number[];
+    parsedInputs: number[];
+  } | null = useMemo(() => {
+    if (!gbiMovie) {
+      return null;
+    }
+    const tmpParsedTimestamps: number[] = [];
+    const tmpParsedInputs: number[] = [];
+    gbiMovie.split("\n").forEach((line, index) => {
+      const splitLine = line.split(" ");
+      tmpParsedTimestamps[index] = Number(`0x${splitLine[0]}`);
+      tmpParsedInputs[index] = Number(`0x${splitLine[1]}`);
+    });
+    return {
+      parsedTimestamps: tmpParsedTimestamps,
+      parsedInputs: tmpParsedInputs,
+    };
+  }, [gbiMovie]);
+  const gbiMovieLineToRead = useRef(0);
 
   useEffect(() => {
     if (touchReset && gambatteReset) {
       gambatteReset(gbPointer, 101 * (2 << 14));
+      totalSamplesEmitted.current = 0;
+      gbiMovieLineToRead.current = 0;
       endTouchReset();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [touchReset, endTouchReset, gbPointer, gambatteReset]);
 
   const keyDownHandler = useCallback(
@@ -79,6 +115,8 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
       }
       if (event.code === keyMapping.reset && gambatteReset) {
         gambatteReset(gbPointer, 101 * (2 << 14));
+        totalSamplesEmitted.current = 0;
+        gbiMovieLineToRead.current = 0;
         return;
       }
       switch (event.code) {
@@ -118,6 +156,7 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
           break;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       keyMappingInProgress,
       keyMapping,
@@ -187,6 +226,18 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
   }, [initialized]);
 
   const getButtonsFunction = useCallback(() => {
+    if (parsedGbiMovie) {
+      while (
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        parsedGbiMovie.parsedTimestamps[gbiMovieLineToRead.current + 1]! * 512 +
+          35112 -
+          127 <=
+        totalSamplesEmitted.current
+      ) {
+        gbiMovieLineToRead.current++;
+      }
+      return parsedGbiMovie.parsedInputs[gbiMovieLineToRead.current] ?? 0;
+    }
     // modeled from https://github.com/whoisryosuke/react-gamepads
     let controllerButtons = 0;
     // Grab gamepads from browser API
@@ -222,13 +273,17 @@ export const useControls = (initialized: boolean, gbPointer?: number) => {
     });
 
     return buttons.current | controllerButtons | touchButtonsRef.current;
-  }, [controllerMapping, gambatteReset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controllerMapping, gambatteReset, parsedGbiMovie]);
 
   useEffect(() => {
     if (gambatteReset && needToReset) {
       gambatteReset(gbPointer, 101 * (2 << 14));
+      totalSamplesEmitted.current = 0;
+      gbiMovieLineToRead.current = 0;
     }
     setNeedToReset(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gambatteReset, gbPointer, needToReset]);
 
   useEffect(() => {

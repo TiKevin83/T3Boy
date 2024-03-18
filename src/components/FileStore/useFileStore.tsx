@@ -6,6 +6,8 @@ interface FileState {
   setBios: (bios: string | null) => void;
   rom: string | null;
   setRom: (rom: string | null) => void;
+  gbiMovie: string | null;
+  setGbiMovie: (rom: string | null) => void;
 }
 
 export const useFileStore = create<FileState>()(
@@ -18,6 +20,10 @@ export const useFileStore = create<FileState>()(
       rom: null,
       setRom: (rom) => {
         set({ rom });
+      },
+      gbiMovie: null,
+      setGbiMovie: (gbiMovie) => {
+        set({ gbiMovie });
       },
     }),
     {

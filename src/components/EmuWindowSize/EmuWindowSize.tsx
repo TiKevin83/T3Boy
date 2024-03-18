@@ -8,7 +8,7 @@ export const EmuWindowSize: React.FC = () => {
   return (
     <div className="flex flex-col">
       <label htmlFor="windowSize" className="text-white">
-        Emulator Window Size
+        Display Scaling
       </label>
       <select
         id="windowSize"

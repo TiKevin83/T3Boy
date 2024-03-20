@@ -48,10 +48,11 @@ export const useControls = (
     ((...args: unknown[]) => unknown) | null
   >(null);
   const buttons = useRef(0);
-  const { addDisplayedButton, removeDisplayedButton } =
+  const { addDisplayedButton, removeDisplayedButton, setDisplayedButtons } =
     useDisplayedButtonsStore((state) => ({
       addDisplayedButton: state.addDisplayedButton,
       removeDisplayedButton: state.removeDisplayedButton,
+      setDisplayedButtons: state.setDisplayedButtons,
     }));
   // Fetch initial state
   const touchButtonsRef = useRef(useTouchButtonsStore.getState().touchButtons);
@@ -236,7 +237,10 @@ export const useControls = (
       ) {
         gbiMovieLineToRead.current++;
       }
-      return parsedGbiMovie.parsedInputs[gbiMovieLineToRead.current] ?? 0;
+      const currentInput =
+        parsedGbiMovie.parsedInputs[gbiMovieLineToRead.current] ?? 0;
+      setDisplayedButtons(currentInput);
+      return currentInput;
     }
     // modeled from https://github.com/whoisryosuke/react-gamepads
     let controllerButtons = 0;

@@ -24,7 +24,7 @@ export const BIOSLoader = () => {
   return (
     <div>
       <label
-        className="mt-2 block text-sm font-medium text-gray-900 dark:text-white"
+        className="mt-2 block text-sm font-medium text-white"
         htmlFor="gbcBios"
       >
         GBC BIOS

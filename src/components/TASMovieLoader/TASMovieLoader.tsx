@@ -16,7 +16,7 @@ export const TASMovieLoader: React.FC = () => {
   return (
     <div>
       <label
-        className="mt-2 block text-sm font-medium text-gray-900 dark:text-white"
+        className="mt-2 block text-sm font-medium text-white"
         htmlFor="tasMovie"
       >
         TAS Input Log - GBI Format

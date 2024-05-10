@@ -410,7 +410,7 @@ export default function Home() {
                     return !currentPlay;
                   });
                 }}
-                className="text-md pointer-events-auto ml-4 block touch-auto font-medium text-gray-900 dark:text-white"
+                className="text-md pointer-events-auto ml-4 block touch-auto font-medium text-white"
               >
                 {play ? <FaPause /> : <FaPlay />}
               </button>

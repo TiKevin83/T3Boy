@@ -77,7 +77,7 @@ export default function Home() {
       return;
     }
     const gambatte_revision = Module.cwrap("gambatte_revision", "number");
-    console.log("revision: " + (gambatte_revision() as number));
+    console.log(`revision: " ${gambatte_revision() as number}`);
   }, [initialized]);
 
   useEffect(() => {
@@ -299,7 +299,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-4 ">
+        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-4">
           <div className="absolute top-0 mr-4 mt-4 flex w-full justify-end space-x-4 text-3xl text-white">
             <a href="https://www.patreon.com/TiKevin83Speedruns">
               <FaPatreon />

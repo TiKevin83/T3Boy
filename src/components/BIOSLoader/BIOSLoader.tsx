@@ -15,9 +15,13 @@ export const BIOSLoader = () => {
 
   const patchBiosForGbcGba = (gbcBiosData: ArrayBuffer) => {
     const patchedBios = new Uint8Array(gbcBiosData);
-    patchedBios[0xf3] ^= 0x03;
+    if (patchedBios[0xf3] !== undefined) {
+      patchedBios[0xf3] ^= 0x03;
+    }
     patchedBios.copyWithin(0xf5, 0xf6, 0xfb);
-    patchedBios[0xfb] ^= 0x74;
+    if (patchedBios[0xfb] !== undefined) {
+      patchedBios[0xfb] ^= 0x74;
+    }
     return patchedBios.buffer as ArrayBuffer;
   };
 

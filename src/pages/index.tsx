@@ -113,6 +113,7 @@ export default function Home() {
         "number",
         "number",
         "number",
+        "number",
       ]);
     });
   }, [initialized]);
@@ -178,6 +179,7 @@ export default function Home() {
     const videoBufferPointer = Module._malloc(160 * 144 * 4);
     const audioBufferPointer = Module._malloc((35112 + 2064) * 4);
     const samplesEmittedPointer = Module._malloc(4);
+    const nativeSamplesEmittedPointer = Module._malloc(4);
 
     const backbuffer = new ImageData(160, 144);
 
@@ -211,34 +213,33 @@ export default function Home() {
         return;
       }
       Module.setValue(samplesEmittedPointer, cyclesPerFrame, "i32");
+      Module.setValue(nativeSamplesEmittedPointer, 0, "i32");
       gambatteRunFor(
         gbPointer,
         videoBufferPointer,
         160,
         audioBufferPointer,
         samplesEmittedPointer,
+        nativeSamplesEmittedPointer,
       );
       const samplesProduced = Module.getValue(samplesEmittedPointer, "i32");
-      totalSamplesEmitted.current += samplesProduced;
-      const bytesProduced = samplesProduced * 4;
+      const nativeSamplesProduced = Module.getValue(
+        nativeSamplesEmittedPointer,
+        "i32",
+      );
+      totalSamplesEmitted.current += nativeSamplesProduced;
 
       // process audio output
 
-      // divide by 2 channels, 2 bytes per 16 bit signed, and 16 to naively resample to 131k
-      const audioSamples = audioContext.createBuffer(
-        2,
-        bytesProduced / 64,
-        2097152 / 16,
-      );
+      const audioSamples = audioContext.createBuffer(2, samplesProduced, 48000);
       const channel1Samples = audioSamples.getChannelData(0);
       const channel2Samples = audioSamples.getChannelData(1);
       for (let sample = 0; sample < channel1Samples.length; sample++) {
-        // inverse of the division by 64 when creating the buffer size, same logic
-        // We also need to divide by 32768 to convert from signed 16 bit to float
+        const sampleOffset = sample * 4;
         channel1Samples[sample] =
-          Module.getValue(audioBufferPointer + sample * 64, "i16") / 32768.0;
+          Module.getValue(audioBufferPointer + sampleOffset, "i16") / 32768.0;
         channel2Samples[sample] =
-          Module.getValue(audioBufferPointer + sample * 64 + 2, "i16") /
+          Module.getValue(audioBufferPointer + sampleOffset + 2, "i16") /
           32768.0;
       }
 
@@ -285,6 +286,7 @@ export default function Home() {
       Module._free(videoBufferPointer);
       Module._free(audioBufferPointer);
       Module._free(samplesEmittedPointer);
+      Module._free(nativeSamplesEmittedPointer);
       cancelAnimationFrame(animationFrame);
       void audioContext.close();
       document.removeEventListener("visibilitychange", visibilityChangeHandler);

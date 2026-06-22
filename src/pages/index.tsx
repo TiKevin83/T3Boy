@@ -37,8 +37,6 @@ declare const Module: {
   _malloc: (size: number) => number;
   _free: (pointer: number) => void;
   HEAPU8: Uint8Array;
-  setValue: (pointer: number, value: number, type: string) => void;
-  getValue: (pointer: number, type: string) => number;
 };
 
 export default function Home() {
@@ -176,25 +174,29 @@ export default function Home() {
       return;
     }
 
-    const videoBufferPointer = Module._malloc(160 * 144 * 4);
-    const audioBufferPointer = Module._malloc((35112 + 2064) * 4);
+    const screenWidth = 160;
+    const screenHeight = 144;
+    const outputSampleRate = 48000;
+    const maxOutputAudioSamples = 2048;
+    const videoBufferPointer = Module._malloc(screenWidth * screenHeight * 4);
+    const audioBufferPointer = Module._malloc(maxOutputAudioSamples * 4);
     const samplesEmittedPointer = Module._malloc(4);
     const nativeSamplesEmittedPointer = Module._malloc(4);
 
-    const backbuffer = new ImageData(160, 144);
-
-    const renderer = document.createElement("canvas");
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const rendererContext = renderer.getContext("2d")!;
-    renderer.width = backbuffer.width;
-    renderer.height = backbuffer.height;
+    const heap32 = new Int32Array(Module.HEAPU8.buffer);
+    const samplesEmittedIndex = samplesEmittedPointer >> 2;
+    const nativeSamplesEmittedIndex = nativeSamplesEmittedPointer >> 2;
+    const videoBuffer = new Uint8ClampedArray(
+      Module.HEAPU8.buffer,
+      videoBufferPointer,
+      screenWidth * screenHeight * 4,
+    );
+    const backbuffer = new ImageData(videoBuffer, screenWidth, screenHeight);
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const presenterContext = canvasRef.current.getContext("2d")!;
 
-    const sampleRate = 48000;
-
-    const audioContext = new AudioContext({ sampleRate });
+    const audioContext = new AudioContext({ sampleRate: outputSampleRate });
 
     // reduce volume
     const gainNode = audioContext.createGain();
@@ -202,69 +204,69 @@ export default function Home() {
     gainNode.connect(audioContext.destination);
 
     const cyclesPerFrame = 35112;
+    const audioScheduleAheadTime = 0.05;
 
     let time = 0;
     let lastBufferDuration = 0;
     let animationFrame = 0;
 
     const renderLoop = () => {
-      if (!(audioContext.currentTime - time > 0.001 || time == 0)) {
+      if (
+        !(time == 0 || time < audioContext.currentTime + audioScheduleAheadTime)
+      ) {
         animationFrame = requestAnimationFrame(renderLoop);
         return;
       }
-      Module.setValue(samplesEmittedPointer, cyclesPerFrame, "i32");
-      Module.setValue(nativeSamplesEmittedPointer, 0, "i32");
+      heap32[samplesEmittedIndex] = cyclesPerFrame;
+      heap32[nativeSamplesEmittedIndex] = 0;
       gambatteRunFor(
         gbPointer,
         videoBufferPointer,
-        160,
+        screenWidth,
         audioBufferPointer,
         samplesEmittedPointer,
         nativeSamplesEmittedPointer,
       );
-      const samplesProduced = Module.getValue(samplesEmittedPointer, "i32");
-      const nativeSamplesProduced = Module.getValue(
-        nativeSamplesEmittedPointer,
-        "i32",
-      );
+      const samplesProduced = heap32[samplesEmittedIndex] ?? 0;
+      const nativeSamplesProduced = heap32[nativeSamplesEmittedIndex] ?? 0;
       totalSamplesEmitted.current += nativeSamplesProduced;
 
       // process audio output
 
-      const audioSamples = audioContext.createBuffer(2, samplesProduced, 48000);
-      const channel1Samples = audioSamples.getChannelData(0);
-      const channel2Samples = audioSamples.getChannelData(1);
-      for (let sample = 0; sample < channel1Samples.length; sample++) {
-        const sampleOffset = sample * 4;
-        channel1Samples[sample] =
-          Module.getValue(audioBufferPointer + sampleOffset, "i16") / 32768.0;
-        channel2Samples[sample] =
-          Module.getValue(audioBufferPointer + sampleOffset + 2, "i16") /
-          32768.0;
-      }
+      if (samplesProduced > 0) {
+        const audioSamples = audioContext.createBuffer(
+          2,
+          samplesProduced,
+          outputSampleRate,
+        );
+        const pcmSamples = new Float32Array(
+          Module.HEAPU8.buffer,
+          audioBufferPointer,
+          samplesProduced * 2,
+        );
+        audioSamples.copyToChannel(
+          pcmSamples.subarray(0, samplesProduced),
+          0,
+        );
+        audioSamples.copyToChannel(
+          pcmSamples.subarray(samplesProduced, samplesProduced * 2),
+          1,
+        );
 
-      // play audio
-      const source = audioContext.createBufferSource();
-      source.buffer = audioSamples;
-      source.connect(gainNode);
-      time =
-        time == 0
-          ? audioContext.currentTime + 0.003
-          : time + lastBufferDuration;
-      lastBufferDuration = source.buffer.duration;
-      source.start(time);
-      // process video output
-      for (let i = 0; i < backbuffer.data.length; i += 4) {
-        const pixel = Module.getValue(videoBufferPointer + i, "i32");
-        backbuffer.data[i + 0] = (pixel >> 16) & 0xff;
-        backbuffer.data[i + 1] = (pixel >> 8) & 0xff;
-        backbuffer.data[i + 2] = pixel & 0xff;
-        backbuffer.data[i + 3] = 0xff;
+        // play audio
+        const source = audioContext.createBufferSource();
+        source.buffer = audioSamples;
+        source.connect(gainNode);
+        time =
+          time == 0
+            ? audioContext.currentTime + audioScheduleAheadTime
+            : time + lastBufferDuration;
+        lastBufferDuration = source.buffer.duration;
+        source.start(time);
       }
 
       // repeat render loop
-      rendererContext.putImageData(backbuffer, 0, 0);
-      presenterContext.drawImage(renderer, 0, 0);
+      presenterContext.putImageData(backbuffer, 0, 0);
       animationFrame = requestAnimationFrame(renderLoop);
     };
 

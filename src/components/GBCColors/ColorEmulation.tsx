@@ -90,17 +90,19 @@ export const ColorEmulation: React.FC<Props> = ({ gbPointer }) => {
   }, [gambatteSetCgbPalette, gbPointer, gbcColorsChecked]);
 
   return (
-    <div className="flex flex-col">
-      <label htmlFor="gbcColors" className="text-white">
-        Emulate GBC Colors
-      </label>
+    <label
+      htmlFor="gbcColors"
+      className="pointer-events-auto flex touch-auto items-center gap-1 text-white"
+    >
       <input
+        id="gbcColors"
         type="checkbox"
         checked={gbcColorsChecked}
         onChange={() => {
           setGbcColorsChecked((oldChecked) => !oldChecked);
         }}
       ></input>
-    </div>
+      Emulate GBC Colors
+    </label>
   );
 };

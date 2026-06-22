@@ -11,6 +11,8 @@ import { GameSave } from "~/components/GameSave/GameSave";
 import {
   FaDiscord,
   FaPatreon,
+  FaPause,
+  FaPlay,
   FaYoutube,
   FaTwitch,
   FaGithub,
@@ -20,7 +22,7 @@ import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
 import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
 import { ColorEmulation } from "~/components/GBCColors/ColorEmulation";
-import { DPad, PowerButton } from "~/components/Controls/DPad";
+import { DPad, ResetButton } from "~/components/Controls/DPad";
 import {
   ActionButtons,
   StartSelectButtons,
@@ -437,6 +439,22 @@ export default function Home() {
                 <ControllerRemapButtons />
                 <EmuWindowSize />
                 {initialized && <ColorEmulation gbPointer={gbPointer} />}
+                <label
+                  htmlFor="EnhancedAudio"
+                  className="pointer-events-auto flex touch-auto items-center gap-1 text-white"
+                >
+                  <input
+                    id="EnhancedAudio"
+                    type="checkbox"
+                    checked={enhancedAudio}
+                    onChange={() => {
+                      setEnhancedAudio((currentEnhancedAudio) => {
+                        return !currentEnhancedAudio;
+                      });
+                    }}
+                  ></input>
+                  Enhanced audio
+                </label>
               </div>
             </>
           )}
@@ -481,31 +499,18 @@ export default function Home() {
                 }}
                 className="pointer-events-auto touch-auto"
               ></input>
-              <label
-                htmlFor="EnhancedAudio"
-                className="pointer-events-auto ml-4 flex touch-auto items-center gap-1 text-white"
+              <button
+                onClick={() => {
+                  setPlay((currentPlay) => {
+                    return !currentPlay;
+                  });
+                }}
+                className="text-md pointer-events-auto ml-4 block touch-auto font-medium text-white"
               >
-                <input
-                  id="EnhancedAudio"
-                  type="checkbox"
-                  checked={enhancedAudio}
-                  onChange={() => {
-                    setEnhancedAudio((currentEnhancedAudio) => {
-                      return !currentEnhancedAudio;
-                    });
-                  }}
-                ></input>
-                Enhanced audio
-              </label>
+                {play ? <FaPause /> : <FaPlay />}
+              </button>
               <div className="ml-4">
-                <PowerButton
-                  poweredOn={play}
-                  onToggle={() => {
-                    setPlay((currentPlay) => {
-                      return !currentPlay;
-                    });
-                  }}
-                />
+                <ResetButton />
               </div>
             </div>
           </div>

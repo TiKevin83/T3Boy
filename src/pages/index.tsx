@@ -227,10 +227,22 @@ export default function Home() {
       lowShelfFilter.frequency.value = 220;
       lowShelfFilter.gain.value = 6;
 
+      const upperPresenceCut = audioContext.createBiquadFilter();
+      upperPresenceCut.type = "peaking";
+      upperPresenceCut.frequency.value = 3300;
+      upperPresenceCut.Q.value = 1.0;
+      upperPresenceCut.gain.value = -3;
+
+      const staticCut = audioContext.createBiquadFilter();
+      staticCut.type = "peaking";
+      staticCut.frequency.value = 4600;
+      staticCut.Q.value = 1.5;
+      staticCut.gain.value = -6;
+
       const highShelfFilter = audioContext.createBiquadFilter();
       highShelfFilter.type = "highshelf";
-      highShelfFilter.frequency.value = 5000;
-      highShelfFilter.gain.value = -8;
+      highShelfFilter.frequency.value = 7000;
+      highShelfFilter.gain.value = -4;
 
       const compressor = audioContext.createDynamicsCompressor();
       compressor.threshold.value = -18;
@@ -247,7 +259,9 @@ export default function Home() {
       limiter.release.value = 0.05;
 
       highPassFilter.connect(lowShelfFilter);
-      lowShelfFilter.connect(highShelfFilter);
+      lowShelfFilter.connect(upperPresenceCut);
+      upperPresenceCut.connect(staticCut);
+      staticCut.connect(highShelfFilter);
       highShelfFilter.connect(compressor);
       compressor.connect(limiter);
       limiter.connect(gainNode);

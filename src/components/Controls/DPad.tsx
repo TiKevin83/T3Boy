@@ -1,9 +1,9 @@
 import {
   FaArrowDown,
   FaArrowLeft,
+  FaPowerOff,
   FaArrowRight,
   FaArrowUp,
-  FaPowerOff,
 } from "react-icons/fa";
 import { TouchButton } from "./TouchButton";
 import { GameBoyButton } from "./useControls";
@@ -11,7 +11,7 @@ import { Placeholder } from "./Placeholder";
 
 export const DPad = () => {
   return (
-    <div className="mr-4 flex flex-col">
+    <div className="flex flex-col">
       <div className="flex flex-row">
         <Placeholder />
         <TouchButton button={GameBoyButton.UP}>
@@ -35,16 +35,14 @@ export const DPad = () => {
         </TouchButton>
         <Placeholder />
       </div>
-      <div className="flex flex-row">
-        <Placeholder />
-      </div>
-      <div className="flex flex-row">
-        <Placeholder />
-        <TouchButton button="reset">
-          <FaPowerOff />
-        </TouchButton>
-        <Placeholder />
-      </div>
     </div>
+  );
+};
+
+export const ResetButton = () => {
+  return (
+    <TouchButton button="reset">
+      <FaPowerOff />
+    </TouchButton>
   );
 };

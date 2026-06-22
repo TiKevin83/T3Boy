@@ -8,7 +8,6 @@ declare const Module: {
   ) => (...args: unknown[]) => unknown;
   _malloc: (size: number) => number;
   _free: (pointer: number) => void;
-  setValue: (pointer: number, value: number, type: string) => void;
   HEAPU8: Uint8Array;
 };
 
@@ -35,11 +34,14 @@ export const ColorEmulation: React.FC<Props> = ({ gbPointer }) => {
     const cgbLutPointer = Module._malloc(0x8000 * 4);
     const trueColorLutPointer = Module._malloc(0x8000 * 4);
     if (gbPointer && gambatteSetCgbPalette) {
+      const heap32 = new Uint32Array(Module.HEAPU8.buffer);
+      const cgbLutIndex = cgbLutPointer >> 2;
+      const trueColorLutIndex = trueColorLutPointer >> 2;
       const trueColor = (r: number, g: number, b: number) => {
         const outputR = (r * 0xff + 0xf) / 0x1f;
         const outputG = (g * 0xff + 0xf) / 0x1f;
         const outputB = (b * 0xff + 0xf) / 0x1f;
-        return (0xff << 24) | (outputR << 16) | (outputG << 8) | outputB;
+        return (0xff << 24) | (outputB << 16) | (outputG << 8) | outputR;
       };
       const cgbColorCurve = [
         0, 6, 12, 20, 28, 36, 45, 56, 66, 76, 88, 100, 113, 125, 137, 149, 161,
@@ -66,14 +68,14 @@ export const ColorEmulation: React.FC<Props> = ({ gbPointer }) => {
           );
         }
 
-        return (0xff << 24) | (outputR << 16) | (outputG << 8) | outputB;
+        return (0xff << 24) | (outputB << 16) | (outputG << 8) | outputR;
       };
       for (let i = 0; i < 0x8000; i++) {
         const r = i & 0x1f;
         const g = (i >> 5) & 0x1f;
         const b = (i >> 10) & 0x1f;
-        Module.setValue(trueColorLutPointer + i * 4, trueColor(r, g, b), "i32");
-        Module.setValue(cgbLutPointer + i * 4, gbcColor(r, g, b), "i32");
+        heap32[trueColorLutIndex + i] = trueColor(r, g, b);
+        heap32[cgbLutIndex + i] = gbcColor(r, g, b);
       }
       if (gbcColorsChecked) {
         gambatteSetCgbPalette(gbPointer, cgbLutPointer);

@@ -22,8 +22,11 @@ import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
 import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
 import { ColorEmulation } from "~/components/GBCColors/ColorEmulation";
-import { DPad } from "~/components/Controls/DPad";
-import { ABStartSelect } from "~/components/Controls/ABStartSelect";
+import { DPad, ResetButton } from "~/components/Controls/DPad";
+import {
+  ActionButtons,
+  StartSelectButtons,
+} from "~/components/Controls/ABStartSelect";
 import { useFileStore } from "~/components/FileStore/useFileStore";
 import { TASMovieLoader } from "~/components/TASMovieLoader/TASMovieLoader";
 
@@ -37,6 +40,15 @@ declare const Module: {
   _malloc: (size: number) => number;
   _free: (pointer: number) => void;
   HEAPU8: Uint8Array;
+};
+
+const volumeSliderToGain = (sliderValue: number) => {
+  if (sliderValue <= 0) {
+    return 0;
+  }
+
+  const minDecibels = -60;
+  return Math.pow(10, (minDecibels + sliderValue * -minDecibels) / 20);
 };
 
 export default function Home() {
@@ -67,7 +79,8 @@ export default function Home() {
   const windowSize = useEmuWindowSizeStore((state) => state.windowSize);
   const [actualDevicePixelRatio, setActualDevicePixelRatio] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [volume, setVolume] = useState(0.01);
+  const [volume, setVolume] = useState(0.5);
+  const [enhancedAudio, setEnhancedAudio] = useState(false);
   const [play, setPlay] = useState(false);
 
   useEffect(() => {
@@ -179,7 +192,9 @@ export default function Home() {
     const outputSampleRate = 48000;
     const maxOutputAudioSamples = 2048;
     const videoBufferPointer = Module._malloc(screenWidth * screenHeight * 4);
-    const audioBufferPointer = Module._malloc(maxOutputAudioSamples * 4);
+    const audioBufferPointer = Module._malloc(
+      maxOutputAudioSamples * 2 * Float32Array.BYTES_PER_ELEMENT,
+    );
     const samplesEmittedPointer = Module._malloc(4);
     const nativeSamplesEmittedPointer = Module._malloc(4);
 
@@ -198,10 +213,48 @@ export default function Home() {
 
     const audioContext = new AudioContext({ sampleRate: outputSampleRate });
 
-    // reduce volume
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = volume;
+    gainNode.gain.value = volumeSliderToGain(volume);
     gainNode.connect(audioContext.destination);
+
+    let sourceOutputNode: AudioNode = gainNode;
+    if (enhancedAudio) {
+      const highPassFilter = audioContext.createBiquadFilter();
+      highPassFilter.type = "highpass";
+      highPassFilter.frequency.value = 30;
+      highPassFilter.Q.value = 0.707;
+
+      const lowShelfFilter = audioContext.createBiquadFilter();
+      lowShelfFilter.type = "lowshelf";
+      lowShelfFilter.frequency.value = 220;
+      lowShelfFilter.gain.value = 6;
+
+      const highShelfFilter = audioContext.createBiquadFilter();
+      highShelfFilter.type = "highshelf";
+      highShelfFilter.frequency.value = 5000;
+      highShelfFilter.gain.value = -8;
+
+      const compressor = audioContext.createDynamicsCompressor();
+      compressor.threshold.value = -18;
+      compressor.knee.value = 6;
+      compressor.ratio.value = 2.25;
+      compressor.attack.value = 0.008;
+      compressor.release.value = 0.12;
+
+      const limiter = audioContext.createDynamicsCompressor();
+      limiter.threshold.value = -1;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.05;
+
+      highPassFilter.connect(lowShelfFilter);
+      lowShelfFilter.connect(highShelfFilter);
+      highShelfFilter.connect(compressor);
+      compressor.connect(limiter);
+      limiter.connect(gainNode);
+      sourceOutputNode = highPassFilter;
+    }
 
     const cyclesPerFrame = 35112;
     const audioScheduleAheadTime = 0.05;
@@ -239,24 +292,23 @@ export default function Home() {
           samplesProduced,
           outputSampleRate,
         );
-        const pcmSamples = new Float32Array(
+        const leftSamples = new Float32Array(
           Module.HEAPU8.buffer,
           audioBufferPointer,
-          samplesProduced * 2,
+          samplesProduced,
         );
-        audioSamples.copyToChannel(
-          pcmSamples.subarray(0, samplesProduced),
-          0,
+        const rightSamples = new Float32Array(
+          Module.HEAPU8.buffer,
+          audioBufferPointer + samplesProduced * Float32Array.BYTES_PER_ELEMENT,
+          samplesProduced,
         );
-        audioSamples.copyToChannel(
-          pcmSamples.subarray(samplesProduced, samplesProduced * 2),
-          1,
-        );
+        audioSamples.copyToChannel(leftSamples, 0);
+        audioSamples.copyToChannel(rightSamples, 1);
 
         // play audio
         const source = audioContext.createBufferSource();
         source.buffer = audioSamples;
-        source.connect(gainNode);
+        source.connect(sourceOutputNode);
         time =
           time == 0
             ? audioContext.currentTime + audioScheduleAheadTime
@@ -293,7 +345,7 @@ export default function Home() {
       void audioContext.close();
       document.removeEventListener("visibilitychange", visibilityChangeHandler);
     };
-  }, [rom, bios, gbPointer, gambatteRunFor, volume, play]);
+  }, [rom, bios, gbPointer, gambatteRunFor, volume, enhancedAudio, play]);
 
   return (
     <>
@@ -378,21 +430,30 @@ export default function Home() {
           )}
           <div className="pointer-events-none flex touch-none flex-col items-center gap-2">
             <p className="text-white">{gameHash?.toUpperCase()}</p>
-            <div className="flex flex-row">
-              <DPad />
-              <canvas
-                ref={canvasRef}
-                id="gameboy"
-                width={160}
-                height={144}
-                style={{
-                  width: `${(windowSize * 160) / actualDevicePixelRatio}px`,
-                  height: `${(windowSize * 144) / actualDevicePixelRatio}px`,
-                }}
-              ></canvas>
-              <ABStartSelect />
+            <div className="grid items-center justify-items-center gap-x-4 gap-y-4 portrait:grid-cols-2 portrait:grid-rows-[auto_auto_auto] landscape:grid-cols-[auto_auto_auto] landscape:grid-rows-[auto_auto]">
+              <div className="portrait:col-span-2 portrait:row-start-1 landscape:col-start-2 landscape:row-start-1">
+                <canvas
+                  ref={canvasRef}
+                  id="gameboy"
+                  width={160}
+                  height={144}
+                  style={{
+                    width: `${(windowSize * 160) / actualDevicePixelRatio}px`,
+                    height: `${(windowSize * 144) / actualDevicePixelRatio}px`,
+                  }}
+                ></canvas>
+              </div>
+              <div className="portrait:col-start-1 portrait:row-start-2 landscape:col-start-1 landscape:row-start-1">
+                <DPad />
+              </div>
+              <div className="portrait:col-start-2 portrait:row-start-2 landscape:col-start-3 landscape:row-start-1">
+                <ActionButtons />
+              </div>
+              <div className="portrait:col-span-2 portrait:row-start-3 landscape:col-start-2 landscape:row-start-2">
+                <StartSelectButtons />
+              </div>
             </div>
-            <div className="flex flex-row">
+            <div className="flex flex-row items-center">
               <label htmlFor="Volume" className="mr-2 text-white">
                 Volume
               </label>
@@ -408,6 +469,22 @@ export default function Home() {
                 }}
                 className="pointer-events-auto touch-auto"
               ></input>
+              <label
+                htmlFor="EnhancedAudio"
+                className="pointer-events-auto ml-4 flex touch-auto items-center gap-1 text-white"
+              >
+                <input
+                  id="EnhancedAudio"
+                  type="checkbox"
+                  checked={enhancedAudio}
+                  onChange={() => {
+                    setEnhancedAudio((currentEnhancedAudio) => {
+                      return !currentEnhancedAudio;
+                    });
+                  }}
+                ></input>
+                Enhanced audio
+              </label>
               <button
                 onClick={() => {
                   setPlay((currentPlay) => {
@@ -418,6 +495,9 @@ export default function Home() {
               >
                 {play ? <FaPause /> : <FaPlay />}
               </button>
+              <div className="ml-4">
+                <ResetButton />
+              </div>
             </div>
           </div>
           <div className="flex flex-col items-center gap-2">

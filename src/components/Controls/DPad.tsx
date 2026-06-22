@@ -39,10 +39,26 @@ export const DPad = () => {
   );
 };
 
-export const ResetButton = () => {
+interface PowerButtonProps {
+  poweredOn: boolean;
+  onToggle: () => void;
+}
+
+export const PowerButton = ({
+  poweredOn,
+  onToggle,
+}: PowerButtonProps) => {
   return (
-    <TouchButton button="reset">
+    <button
+      type="button"
+      aria-label={poweredOn ? "Power off" : "Power on"}
+      className="pointer-events-auto flex h-16 w-16 touch-auto select-none items-center justify-center rounded"
+      style={{
+        backgroundColor: poweredOn ? "blue" : "white",
+      }}
+      onClick={onToggle}
+    >
       <FaPowerOff />
-    </TouchButton>
+    </button>
   );
 };

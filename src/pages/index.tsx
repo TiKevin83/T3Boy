@@ -11,8 +11,6 @@ import { GameSave } from "~/components/GameSave/GameSave";
 import {
   FaDiscord,
   FaPatreon,
-  FaPause,
-  FaPlay,
   FaYoutube,
   FaTwitch,
   FaGithub,
@@ -22,7 +20,7 @@ import { useSession } from "next-auth/react";
 import { useEmuWindowSizeStore } from "~/components/EmuWindowSize/useEmuWindowSizeStore";
 import { EmuWindowSize } from "~/components/EmuWindowSize/EmuWindowSize";
 import { ColorEmulation } from "~/components/GBCColors/ColorEmulation";
-import { DPad, ResetButton } from "~/components/Controls/DPad";
+import { DPad, PowerButton } from "~/components/Controls/DPad";
 import {
   ActionButtons,
   StartSelectButtons,
@@ -485,18 +483,15 @@ export default function Home() {
                 ></input>
                 Enhanced audio
               </label>
-              <button
-                onClick={() => {
-                  setPlay((currentPlay) => {
-                    return !currentPlay;
-                  });
-                }}
-                className="text-md pointer-events-auto ml-4 block touch-auto font-medium text-white"
-              >
-                {play ? <FaPause /> : <FaPlay />}
-              </button>
               <div className="ml-4">
-                <ResetButton />
+                <PowerButton
+                  poweredOn={play}
+                  onToggle={() => {
+                    setPlay((currentPlay) => {
+                      return !currentPlay;
+                    });
+                  }}
+                />
               </div>
             </div>
           </div>

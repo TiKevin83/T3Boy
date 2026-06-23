@@ -79,7 +79,7 @@ export default function Home() {
   const windowSize = useEmuWindowSizeStore((state) => state.windowSize);
   const [actualDevicePixelRatio, setActualDevicePixelRatio] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [volume, setVolume] = useState(0.5);
+  const [volume, setVolume] = useState(0.8);
   const [enhancedAudio, setEnhancedAudio] = useState(false);
   const [play, setPlay] = useState(false);
 
@@ -202,14 +202,13 @@ export default function Home() {
     const samplesEmittedIndex = samplesEmittedPointer >> 2;
     const nativeSamplesEmittedIndex = nativeSamplesEmittedPointer >> 2;
     const videoBuffer = new Uint8ClampedArray(
-      Module.HEAPU8.buffer,
+      Module.HEAPU8.buffer as ArrayBuffer,
       videoBufferPointer,
       screenWidth * screenHeight * 4,
     );
     const backbuffer = new ImageData(videoBuffer, screenWidth, screenHeight);
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const presenterContext = canvasRef.current.getContext("2d")!;
+    const presenterContext = canvasRef.current.getContext("2d");
 
     const audioContext = new AudioContext({ sampleRate: outputSampleRate });
 
@@ -239,7 +238,7 @@ export default function Home() {
       staticCut.type = "peaking";
       staticCut.frequency.value = 4600;
       staticCut.Q.value = 1.5;
-      staticCut.gain.value = -6;
+      staticCut.gain.value = -3;
 
       const highShelfFilter = audioContext.createBiquadFilter();
       highShelfFilter.type = "highshelf";
@@ -247,7 +246,7 @@ export default function Home() {
       highShelfFilter.gain.value = -4;
 
       const compressor = audioContext.createDynamicsCompressor();
-      compressor.threshold.value = -18;
+      compressor.threshold.value = -30;
       compressor.knee.value = 6;
       compressor.ratio.value = 2.25;
       compressor.attack.value = 0.008;
@@ -307,12 +306,12 @@ export default function Home() {
           outputSampleRate,
         );
         const leftSamples = new Float32Array(
-          Module.HEAPU8.buffer,
+          Module.HEAPU8.buffer as ArrayBuffer,
           audioBufferPointer,
           samplesProduced,
         );
         const rightSamples = new Float32Array(
-          Module.HEAPU8.buffer,
+          Module.HEAPU8.buffer as ArrayBuffer,
           audioBufferPointer + samplesProduced * Float32Array.BYTES_PER_ELEMENT,
           samplesProduced,
         );
@@ -332,7 +331,7 @@ export default function Home() {
       }
 
       // repeat render loop
-      presenterContext.putImageData(backbuffer, 0, 0);
+      presenterContext?.putImageData(backbuffer, 0, 0);
       animationFrame = requestAnimationFrame(renderLoop);
     };
 
